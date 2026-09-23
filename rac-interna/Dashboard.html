@@ -1,0 +1,26 @@
+<!-- Dashboard básico (seções 32 e 33) -->
+<section class="view" id="view-dashboard">
+  <div class="botoes" style="justify-content:space-between; margin-bottom:6px">
+    <h1>Dashboard</h1>
+    <button class="btn" id="dash-atualizar">Atualizar</button>
+  </div>
+  <p class="sub" id="dash-sub">Considera RACs registradas (exclui "Em elaboração" e "Cancelada").</p>
+
+  <div class="kpis" id="dash-kpis"></div>
+
+  <div class="cartao">
+    <h2>RACs por mês (últimos 12 meses)</h2>
+    <div id="dash-meses"></div>
+  </div>
+
+  <div class="graficos">
+    <div class="cartao"><h2>Por produto</h2><div class="barras" id="dash-produto"></div></div>
+    <div class="cartao"><h2>Por lote</h2><div class="barras" id="dash-lote"></div></div>
+    <div class="cartao"><h2>Por categoria</h2><div class="barras" id="dash-categoria"></div></div>
+    <div class="cartao"><h2>Por subcategoria (região)</h2><div class="barras" id="dash-subcategoria"></div></div>
+    <div class="cartao"><h2>Por condição da embalagem externa</h2><div class="barras" id="dash-condicao"></div></div>
+    <div class="cartao"><h2>Por tipo de embalagem</h2><div class="barras" id="dash-embalagem"></div></div>
+    <div class="cartao"><h2>Por fornecedor</h2><div class="barras" id="dash-fornecedor"></div></div>
+    <div class="cartao"><h2>Por status</h2><div class="barras" id="dash-status"></div></div>
+  </div>
+</section>
