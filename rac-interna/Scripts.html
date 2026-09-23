@@ -1,0 +1,704 @@
+<script>
+/* =====================================================================
+ * RAC Interna Arvensis: lógica do navegador
+ * ===================================================================== */
+
+var App = {
+  ctx: null,
+  arquivos: [],        // [{id, file, legenda, enviado, url}]
+  racPendente: null,   // {rac_id, rac_numero, anexosExistentes} quando uma RAC em elaboração está sendo continuada
+  racAtual: null,      // detalhe aberto
+  ultimaConfirmacao: null
+};
+
+/* ---------- utilitários ---------- */
+
+function $(id) { return document.getElementById(id); }
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+/** Chama uma função api_* do servidor e devolve uma Promise. */
+function chamar(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return new Promise(function (resolve, reject) {
+    var runner = google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.ok) resolve(r.dados);
+        else reject(r || { mensagem: 'Erro desconhecido.' });
+      })
+      .withFailureHandler(function (e) { reject({ mensagem: (e && e.message) || String(e), erros: [] }); });
+    runner[fn].apply(runner, args);
+  });
+}
+
+function alerta(destino, tipo, html) {
+  $(destino).innerHTML = html ? '<div class="alerta ' + tipo + '">' + html + '</div>' : '';
+}
+
+function dataBR(iso) {
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+  if (!m) return esc(iso || '');
+  return m[3] + '/' + m[2] + '/' + m[1] + (m[4] ? ' ' + m[4] + ':' + m[5] : '');
+}
+
+function classeStatus(s) {
+  var S = App.ctx.statusFixos;
+  if (s === S.ELABORACAO) return 's-elaboracao';
+  if (s === S.REGISTRADA) return 's-registrada';
+  if (s === S.ENCAMINHADA) return 's-encaminhada';
+  if (s === S.CONCLUIDA) return 's-concluida';
+  if (s === S.CANCELADA) return 's-cancelada';
+  return 's-analise';
+}
+
+function badge(s) { return '<span class="badge ' + classeStatus(s) + '">' + esc(s) + '</span>'; }
+
+function opcoes(select, lista, vazio) {
+  select.innerHTML = (vazio !== undefined ? '<option value="">' + esc(vazio) + '</option>' : '') +
+    lista.map(function (v) { return '<option>' + esc(v) + '</option>'; }).join('');
+}
+
+function tamanhoMb(bytes) { return (bytes / 1048576).toFixed(1).replace('.', ',') + ' MB'; }
+
+/* ---------- navegação ---------- */
+
+function mostrar(view) {
+  document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('ativa', v.id === 'view-' + view); });
+  var aba = view === 'detalhe' ? 'consulta' : view === 'confirmacao' ? 'nova' : view;
+  document.querySelectorAll('#abas button').forEach(function (b) { b.classList.toggle('ativa', b.dataset.view === aba); });
+  window.scrollTo(0, 0);
+  if (view === 'consulta') pesquisar();
+  if (view === 'dashboard') carregarDashboard();
+}
+
+/* ---------- inicialização ---------- */
+
+document.addEventListener('DOMContentLoaded', function () {
+  mostrar('carregando');
+  chamar('api_contexto').then(iniciar).catch(function (e) {
+    $('usuario').textContent = '';
+    alerta('alerta-global', 'erro', esc(e.mensagem));
+  });
+});
+
+function iniciar(ctx) {
+  App.ctx = ctx;
+  $('usuario').innerHTML = esc(ctx.usuario.nome) + '<span class="perfil">' + esc(ctx.usuario.perfil) + '</span>';
+  document.querySelectorAll('#abas button').forEach(function (b) {
+    if (ctx.permissoes.indexOf(b.dataset.perm) === -1) b.classList.add('oculto');
+    b.addEventListener('click', function () { mostrar(b.dataset.view); });
+  });
+
+  var L = ctx.listas;
+  $('lista-produtos').innerHTML = L.produtos.map(function (p) {
+    return '<option value="' + esc(p.nome_produto) + '">' + esc(p.sku) + '</option>';
+  }).join('');
+  opcoes($('f-categoria'), L.categorias, 'Selecione…');
+  opcoes($('f-condicao'), L.condicoes, 'Selecione…');
+  atualizarSubcategorias();
+  opcoes($('b-status'), L.status, 'Todos');
+  opcoes($('b-categoria'), L.categorias, 'Todas');
+
+  var lim = ctx.limites;
+  $('dica-tipos').textContent = 'JPG, JPEG, PNG, WEBP (até ' + lim.imagemMb + ' MB) · PDF (até ' + lim.pdfMb + ' MB)' +
+    (lim.aceitarVideo ? ' · MP4 (até ' + lim.videoMb + ' MB)' : '');
+  $('f-arquivos').accept = '.jpg,.jpeg,.png,.webp,.pdf' + (lim.aceitarVideo ? ',.mp4' : '');
+  $('d-arquivos').accept = $('f-arquivos').accept;
+
+  ligarFormulario();
+  ligarConsulta();
+  ligarDetalhe();
+  $('dash-atualizar').addEventListener('click', carregarDashboard);
+  if (ctx.admin) montarAdmin(ctx.admin);
+
+  var inicial = ctx.permissoes.indexOf('criar') !== -1 ? 'nova' : 'consulta';
+  mostrar(inicial);
+}
+
+/* =====================================================================
+ * Formulário "Nova RAC"
+ * ===================================================================== */
+
+function ligarFormulario() {
+  $('f-produto').addEventListener('input', preencherSku);
+  $('f-produto').addEventListener('change', preencherSku);
+  $('f-categoria').addEventListener('change', atualizarSubcategorias);
+  $('f-chamado-nao').addEventListener('change', function () {
+    $('f-chamado').disabled = this.checked;
+    if (this.checked) $('f-chamado').value = '';
+  });
+  $('f-lote').addEventListener('input', function () { this.value = this.value.toUpperCase(); });
+
+  var zona = $('zona-upload');
+  zona.addEventListener('click', function () { $('f-arquivos').click(); });
+  zona.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('f-arquivos').click(); } });
+  $('f-arquivos').addEventListener('change', function () { adicionarArquivos(this.files); this.value = ''; });
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    zona.addEventListener(ev, function (e) { e.preventDefault(); zona.classList.add('arrastando'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    zona.addEventListener(ev, function (e) { e.preventDefault(); zona.classList.remove('arrastando'); });
+  });
+  zona.addEventListener('drop', function (e) { adicionarArquivos(e.dataTransfer.files); });
+
+  $('form-rac').addEventListener('submit', function (e) { e.preventDefault(); gerarRac(); });
+  $('btn-limpar').addEventListener('click', function () {
+    if (confirm('Limpar todos os campos e evidências?')) limparFormulario();
+  });
+
+  $('conf-ver').addEventListener('click', function () { abrirDetalhe(App.ultimaConfirmacao.rac.rac_id); });
+  $('conf-nova').addEventListener('click', function () { limparFormulario(); mostrar('nova'); });
+  $('conf-criar-email').addEventListener('click', criarEmailConfirmacao);
+  $('conf-encaminhar').addEventListener('click', function () {
+    var rac = App.ultimaConfirmacao.rac;
+    var btn = this;
+    btn.disabled = true;
+    chamar('api_alterarStatus', rac.rac_id, App.ctx.statusFixos.ENCAMINHADA, 'E-mail enviado à Qualidade.')
+      .then(function (det) { abrirDetalhe(det.rac.rac_id, det); })
+      .catch(function (e) { alert(e.mensagem); })
+      .finally(function () { btn.disabled = false; });
+  });
+  document.querySelectorAll('[data-copiar]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var txt = $(b.dataset.copiar).textContent;
+      navigator.clipboard.writeText(txt).then(function () {
+        var t = b.textContent; b.textContent = 'Copiado!'; setTimeout(function () { b.textContent = t; }, 1500);
+      });
+    });
+  });
+}
+
+function produtoPorNome(nome) {
+  nome = String(nome || '').trim().toLowerCase();
+  return App.ctx.listas.produtos.filter(function (p) { return p.nome_produto.toLowerCase() === nome; })[0];
+}
+
+function preencherSku() {
+  var p = produtoPorNome($('f-produto').value);
+  $('f-sku').value = p ? p.sku : '';
+}
+
+function atualizarSubcategorias() {
+  var cat = $('f-categoria').value;
+  var atual = $('f-subcategoria').value;
+  var lista = [];
+  App.ctx.listas.subcategorias.forEach(function (s) {
+    if ((s.categoria === '*' || s.categoria === cat) && lista.indexOf(s.nome) === -1) lista.push(s.nome);
+  });
+  opcoes($('f-subcategoria'), lista, cat ? 'Selecione…' : 'Escolha a categoria primeiro');
+  if (lista.indexOf(atual) !== -1) $('f-subcategoria').value = atual;
+}
+
+/* ---------- evidências ---------- */
+
+var LIMITE_TIPOS = {
+  jpg: 'imagem', jpeg: 'imagem', png: 'imagem', webp: 'imagem', pdf: 'pdf', mp4: 'video'
+};
+
+function validarArquivoCliente(file) {
+  var lim = App.ctx.limites;
+  var ext = (file.name.match(/\.([a-z0-9]+)$/i) || [])[1];
+  var grupo = LIMITE_TIPOS[(ext || '').toLowerCase()];
+  if (!grupo || (grupo === 'video' && !lim.aceitarVideo)) return 'Tipo não aceito: ' + file.name;
+  var mb = grupo === 'imagem' ? lim.imagemMb : grupo === 'pdf' ? lim.pdfMb : lim.videoMb;
+  if (file.size > mb * 1048576) return file.name + ' ultrapassa ' + mb + ' MB.';
+  if (!file.size) return file.name + ' está vazio.';
+  return '';
+}
+
+function adicionarArquivos(lista) {
+  var erros = [];
+  Array.prototype.forEach.call(lista, function (file) {
+    var erro = validarArquivoCliente(file);
+    if (erro) { erros.push(erro); return; }
+    var legenda = /\.pdf$/i.test(file.name) ? 'Nota fiscal' : /\.mp4$/i.test(file.name) ? 'Vídeo' : 'Evidência';
+    if (App.ctx.listas.legendas.indexOf(legenda) === -1) legenda = App.ctx.listas.legendas[0];
+    App.arquivos.push({ id: Math.random().toString(36).slice(2), file: file, legenda: legenda, enviado: false });
+  });
+  alerta('erros-form', 'erro', erros.length ? erros.map(esc).join('<br>') : '');
+  renderPrevias();
+}
+
+function renderPrevias() {
+  var cont = $('previas');
+  cont.innerHTML = '';
+  App.arquivos.forEach(function (a, i) {
+    var div = document.createElement('div');
+    div.className = 'previa' + (a.enviado ? ' enviado' : '');
+    var ehImagem = /^image\//.test(a.file.type);
+    if (ehImagem && !a.url) a.url = URL.createObjectURL(a.file);
+    var ext = (a.file.name.split('.').pop() || '').toUpperCase();
+    div.innerHTML =
+      '<div class="img"' + (ehImagem ? ' style="background-image:url(' + a.url + ')"' : '') + '>' + (ehImagem ? '' : esc(ext)) + '</div>' +
+      '<div class="info">' +
+        '<span class="nome" title="' + esc(a.file.name) + '">' + String(i + 1).padStart(2, '0') + ' · ' + esc(a.file.name) + '</span>' +
+        '<select aria-label="Legenda da evidência"' + (a.enviado ? ' disabled' : '') + '>' +
+          App.ctx.listas.legendas.map(function (l) { return '<option' + (l === a.legenda ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join('') +
+        '</select>' +
+        '<div class="rodape"><span class="dica">' + tamanhoMb(a.file.size) + '</span>' +
+          (a.enviado ? '<span class="estado">Enviado</span>' : '<button type="button">Remover</button>') +
+        '</div>' +
+      '</div>';
+    div.querySelector('select').addEventListener('change', function () { a.legenda = this.value; });
+    var rm = div.querySelector('button');
+    if (rm) rm.addEventListener('click', function () {
+      if (a.url) URL.revokeObjectURL(a.url);
+      App.arquivos.splice(App.arquivos.indexOf(a), 1);
+      renderPrevias();
+    });
+    cont.appendChild(div);
+  });
+}
+
+function lerBase64(file) {
+  return new Promise(function (resolve, reject) {
+    var r = new FileReader();
+    r.onload = function () { resolve(String(r.result).split(',')[1] || ''); };
+    r.onerror = function () { reject({ mensagem: 'Não foi possível ler o arquivo ' + file.name + '.' }); };
+    r.readAsDataURL(file);
+  });
+}
+
+/* ---------- validação e envio ---------- */
+
+function dadosFormulario() {
+  return {
+    produto: $('f-produto').value.trim(),
+    sku: $('f-sku').value.trim(),
+    lote: $('f-lote').value.trim(),
+    nota_fiscal: $('f-nf').value.trim(),
+    chamado_estoca: $('f-chamado').value.trim(),
+    chamado_nao_aberto: $('f-chamado-nao').checked,
+    categoria: $('f-categoria').value,
+    subcategoria: $('f-subcategoria').value,
+    condicao_caixa: $('f-condicao').value,
+    descricao: $('f-descricao').value.trim(),
+    observacao: $('f-observacao').value.trim()
+  };
+}
+
+function limparErros() {
+  document.querySelectorAll('.com-erro').forEach(function (el) { el.classList.remove('com-erro'); });
+  document.querySelectorAll('#form-rac .msg-erro').forEach(function (el) { el.remove(); });
+  alerta('erros-form', '', '');
+}
+
+function mostrarErros(erros, mensagem) {
+  var primeiro = null;
+  (erros || []).forEach(function (e) {
+    var el = document.querySelector('#form-rac [data-campo="' + e.campo + '"]');
+    if (!el) return;
+    el.classList.add('com-erro');
+    var span = document.createElement('span');
+    span.className = 'msg-erro';
+    span.textContent = e.mensagem;
+    if (el.classList.contains('zona')) el.parentNode.insertBefore(span, el.nextSibling);
+    else el.appendChild(span);
+    if (!primeiro) primeiro = el;
+  });
+  alerta('erros-form', 'erro', esc(mensagem || 'Verifique os campos destacados.'));
+  (primeiro || $('erros-form')).scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function validarCliente(d) {
+  var erros = [];
+  function exigir(c, rot) { if (!d[c]) erros.push({ campo: c, mensagem: 'Preencha ' + rot + '.' }); }
+  exigir('produto', 'o produto');
+  if (d.produto && !produtoPorNome(d.produto)) erros.push({ campo: 'produto', mensagem: 'Selecione um produto da lista.' });
+  exigir('lote', 'o lote');
+  exigir('nota_fiscal', 'a nota fiscal');
+  if (!d.chamado_nao_aberto) exigir('chamado_estoca', 'o chamado Estoca ou marque "Chamado ainda não aberto"');
+  exigir('categoria', 'a categoria');
+  exigir('descricao', 'a descrição');
+  var totalEvidencias = App.arquivos.length + (App.racPendente ? App.racPendente.anexosExistentes : 0);
+  if (App.ctx.exigirEvidencia && totalEvidencias === 0) {
+    erros.push({ campo: 'evidencias', mensagem: 'Anexe pelo menos uma evidência.' });
+  }
+  return erros;
+}
+
+var ETAPAS = ['Validando e registrando a RAC', 'Enviando evidências', 'Gerando PDF e rascunho de e-mail'];
+
+function progresso(indice, extra) {
+  $('progresso').classList.remove('oculto');
+  $('progresso-etapas').innerHTML = ETAPAS.map(function (t, i) {
+    var cls = i < indice ? 'feito' : i === indice ? 'atual' : '';
+    return '<li class="' + cls + '">' + esc(t) + (i === indice && extra ? ' (' + esc(extra) + ')' : '') + '</li>';
+  }).join('');
+}
+
+function fecharProgresso() { $('progresso').classList.add('oculto'); }
+
+async function gerarRac() {
+  limparErros();
+  var dados = dadosFormulario();
+  var erros = validarCliente(dados);
+  if (erros.length) { mostrarErros(erros); return; }
+
+  var btn = $('btn-gerar');
+  btn.disabled = true;
+  try {
+    progresso(0);
+    if (!App.racPendente) {
+      var criada = await chamar('api_criarRac', dados);
+      App.racPendente = { rac_id: criada.rac_id, rac_numero: criada.rac_numero, anexosExistentes: 0 };
+    } else {
+      await chamar('api_editarRac', App.racPendente.rac_id, dados);
+    }
+
+    var pendentes = App.arquivos.filter(function (a) { return !a.enviado; });
+    for (var i = 0; i < pendentes.length; i++) {
+      var a = pendentes[i];
+      progresso(1, (i + 1) + ' de ' + pendentes.length);
+      var b64 = await lerBase64(a.file);
+      await chamar('api_enviarAnexo', App.racPendente.rac_id, { nome: a.file.name, legenda: a.legenda, base64: b64 });
+      a.enviado = true;
+      App.racPendente.anexosExistentes++;
+      renderPrevias();
+    }
+
+    progresso(2);
+    var res = await chamar('api_finalizarRac', App.racPendente.rac_id);
+    fecharProgresso();
+    mostrarConfirmacao(res);
+    limparFormulario();
+  } catch (e) {
+    fecharProgresso();
+    var msg = e.mensagem || 'Erro ao gerar a RAC.';
+    if (App.racPendente) {
+      msg += '<br><br>A RAC <strong>' + esc(App.racPendente.rac_numero) + '</strong> foi salva como "Em elaboração". ' +
+        'Corrija o problema e clique em GERAR RAC novamente para continuar. Evidências já enviadas não serão reenviadas.';
+      avisoContinuacao();
+    }
+    mostrarErros(e.erros, '');
+    alerta('erros-form', 'erro', msg);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function avisoContinuacao() {
+  var p = App.racPendente;
+  alerta('aviso-continuacao', 'aviso', p
+    ? 'Continuando a RAC <strong>' + esc(p.rac_numero) + '</strong> (em elaboração, ' + p.anexosExistentes + ' evidência(s) já enviada(s)).'
+    : '');
+}
+
+function limparFormulario() {
+  $('form-rac').reset();
+  $('f-chamado').disabled = false;
+  $('f-sku').value = '';
+  atualizarSubcategorias();
+  App.arquivos.forEach(function (a) { if (a.url) URL.revokeObjectURL(a.url); });
+  App.arquivos = [];
+  App.racPendente = null;
+  renderPrevias();
+  limparErros();
+  avisoContinuacao();
+}
+
+/* ---------- confirmação ---------- */
+
+function mostrarConfirmacao(res) {
+  App.ultimaConfirmacao = res;
+  var rac = res.rac;
+  $('conf-numero').textContent = rac.rac_numero;
+  $('conf-pdf').href = rac.link_pdf;
+  $('conf-pasta').href = rac.link_pasta;
+  preencherEmail(res.email);
+  mostrar('confirmacao');
+}
+
+function preencherEmail(email) {
+  var temRascunho = !!(email && email.link);
+  $('conf-rascunho').classList.toggle('oculto', !temRascunho);
+  $('conf-criar-email').classList.toggle('oculto', temRascunho);
+  if (temRascunho) $('conf-rascunho').href = email.link;
+  alerta('conf-email-status', temRascunho ? 'ok' : 'aviso', temRascunho
+    ? 'Rascunho de e-mail criado no seu Gmail com o PDF anexado. Revise e envie.'
+    : 'O rascunho não foi criado' + (email && email.erro ? ': ' + esc(email.erro) : '.') +
+      ' Tente "Criar e-mail" novamente ou copie o texto abaixo.');
+  $('conf-para').textContent = (email && email.para) || '(configurar EMAIL_DESTINATARIOS)';
+  $('conf-assunto').textContent = (email && email.assunto) || '';
+  $('conf-corpo').textContent = (email && email.corpo) || '';
+}
+
+function criarEmailConfirmacao() {
+  var btn = $('conf-criar-email');
+  btn.disabled = true;
+  chamar('api_criarEmail', App.ultimaConfirmacao.rac.rac_id)
+    .then(function (email) { App.ultimaConfirmacao.email = email; preencherEmail(email); })
+    .catch(function (e) { preencherEmail({ erro: e.mensagem, para: $('conf-para').textContent, assunto: $('conf-assunto').textContent, corpo: $('conf-corpo').textContent }); })
+    .finally(function () { btn.disabled = false; });
+}
+
+/* =====================================================================
+ * Consulta
+ * ===================================================================== */
+
+function ligarConsulta() {
+  $('form-busca').addEventListener('submit', function (e) { e.preventDefault(); pesquisar(); });
+  $('b-limpar').addEventListener('click', function () { $('form-busca').reset(); pesquisar(); });
+}
+
+function pesquisar() {
+  var filtros = {
+    texto: $('b-texto').value.trim(),
+    status: $('b-status').value,
+    categoria: $('b-categoria').value,
+    de: $('b-de').value,
+    ate: $('b-ate').value
+  };
+  $('resultado-resumo').textContent = 'Pesquisando…';
+  chamar('api_pesquisar', filtros).then(function (lista) {
+    $('resultado-resumo').textContent = lista.length + ' RAC(s) encontrada(s)' + (lista.length === 500 ? ' (mostrando as 500 mais recentes)' : '') + '.';
+    $('resultado').innerHTML = lista.map(function (r) {
+      return '<tr data-id="' + esc(r.rac_id) + '">' +
+        '<td style="white-space:nowrap"><strong>' + esc(r.rac_numero) + '</strong></td>' +
+        '<td>' + dataBR(r.data_abertura) + '</td>' +
+        '<td>' + esc(r.produto) + '<br><span class="dica">' + esc(r.sku) + '</span></td>' +
+        '<td>' + esc(r.lote) + '</td>' +
+        '<td>' + esc(r.categoria) + (r.subcategoria ? '<br><span class="dica">' + esc(r.subcategoria) + '</span>' : '') + '</td>' +
+        '<td>' + badge(r.status) + '</td></tr>';
+    }).join('') || '<tr><td colspan="6" class="vazio">Nenhuma RAC encontrada.</td></tr>';
+    document.querySelectorAll('#resultado tr[data-id]').forEach(function (tr) {
+      tr.addEventListener('click', function () { abrirDetalhe(tr.dataset.id); });
+    });
+  }).catch(function (e) { $('resultado-resumo').textContent = e.mensagem; });
+}
+
+/* =====================================================================
+ * Detalhe
+ * ===================================================================== */
+
+function ligarDetalhe() {
+  $('d-voltar').addEventListener('click', function () { mostrar('consulta'); });
+  $('d-salvar-status').addEventListener('click', salvarStatus);
+  $('d-btn-anexar').addEventListener('click', function () { $('d-arquivos').click(); });
+  $('d-arquivos').addEventListener('change', function () { anexarNoDetalhe(this.files); this.value = ''; });
+}
+
+function abrirDetalhe(racId, detalhePronto) {
+  alerta('d-alerta', '', '');
+  mostrar('detalhe');
+  $('d-numero').textContent = 'Carregando…';
+  var p = detalhePronto ? Promise.resolve(detalhePronto) : chamar('api_obterRac', racId);
+  p.then(renderDetalhe).catch(function (e) { alerta('d-alerta', 'erro', esc(e.mensagem)); });
+}
+
+function item(rotulo, valor) {
+  return '<div><dt>' + esc(rotulo) + '</dt><dd>' + (valor === undefined || valor === '' ? '-' : valor) + '</dd></div>';
+}
+
+function renderDetalhe(det) {
+  App.racAtual = det;
+  var r = det.rac;
+  $('d-numero').textContent = r.rac_numero;
+  $('d-status').outerHTML = '<span class="badge ' + classeStatus(r.status) + '" id="d-status">' + esc(r.status) + '</span>';
+
+  var botoes = [];
+  if (r.link_pdf) botoes.push('<a class="btn" target="_blank" rel="noopener" href="' + esc(r.link_pdf) + '">Abrir PDF</a>');
+  if (r.link_pasta) botoes.push('<a class="btn" target="_blank" rel="noopener" href="' + esc(r.link_pasta) + '">Pasta de evidências</a>');
+  if (det.acoes.continuarPreenchimento) botoes.push('<button class="btn primario" id="d-continuar">Continuar preenchimento</button>');
+  if (det.acoes.criarEmail) botoes.push('<button class="btn" id="d-email">Criar rascunho de e-mail</button>');
+  $('d-botoes').innerHTML = botoes.join('');
+  if ($('d-continuar')) $('d-continuar').addEventListener('click', continuarPreenchimento);
+  if ($('d-email')) $('d-email').addEventListener('click', function () {
+    var btn = this; btn.disabled = true;
+    chamar('api_criarEmail', r.rac_id).then(function (email) {
+      alerta('d-alerta', 'ok', 'Rascunho criado. <a target="_blank" rel="noopener" href="' + esc(email.link) + '">Abrir no Gmail</a>');
+      return chamar('api_obterRac', r.rac_id).then(renderDetalhe);
+    }).catch(function (e) { alerta('d-alerta', 'erro', esc(e.mensagem)); })
+      .finally(function () { btn.disabled = false; });
+  });
+
+  $('d-dados').innerHTML = [
+    item('Abertura', dataBR(r.data_abertura) + ' ' + esc(r.hora_abertura)),
+    item('Criada por', esc(r.usuario_criador)),
+    item('Produto', esc(r.produto)),
+    item('SKU', esc(r.sku)),
+    item('Lote', esc(r.lote)),
+    item('Nota fiscal', esc(r.nota_fiscal)),
+    item('Chamado Estoca', esc(r.chamado_estoca)),
+    item('Categoria', esc(r.categoria)),
+    item('Subcategoria', esc(r.subcategoria)),
+    item('Condição da embalagem externa', esc(r.condicao_caixa)),
+    item('Evidências', esc(r.quantidade_anexos)),
+    item('Última atualização', dataBR(r.ultima_atualizacao))
+  ].join('');
+  $('d-descricao').textContent = r.descricao;
+  $('d-observacao').textContent = r.observacao;
+  $('d-obs-bloco').classList.toggle('oculto', !r.observacao);
+
+  $('d-galeria').innerHTML = det.anexos.map(function (a) {
+    var ehImagem = /^image\//.test(a.tipo);
+    var thumb = 'https://drive.google.com/thumbnail?sz=w400&id=' + encodeURIComponent(a.file_id);
+    return '<a target="_blank" rel="noopener" href="' + esc(a.url) + '" title="' + esc(a.nome_original) + '">' +
+      '<div class="img"' + (ehImagem ? ' style="background-image:url(\'' + thumb + '\')"' : '') + '>' +
+      (ehImagem ? '' : esc((a.nome_sistema.split('.').pop() || '').toUpperCase())) + '</div>' +
+      '<span>' + esc(a.nome_sistema) + '</span></a>';
+  }).join('') || '<p class="vazio">Nenhuma evidência anexada.</p>';
+  $('d-anexar').classList.toggle('oculto', !det.acoes.anexar);
+  $('d-anexar-status').textContent = '';
+
+  var sp = det.acoes.statusPermitidos;
+  $('d-status-bloco').classList.toggle('oculto', !sp.length);
+  opcoes($('d-novo-status'), sp);
+  $('d-comentario').value = '';
+
+  $('d-parecer').innerHTML = [
+    item('Responsável Qualidade', esc(r.responsavel_qualidade)),
+    item('Envio à Qualidade', dataBR(r.data_envio_qualidade)),
+    item('Início da análise', dataBR(r.data_inicio_analise)),
+    item('Conclusão', dataBR(r.data_conclusao)),
+    item('Causa provável', esc(r.causa_provavel)),
+    item('Ação corretiva', esc(r.acao_corretiva)),
+    item('Fornecedor', esc(r.fornecedor))
+  ].join('');
+
+  $('d-historico').innerHTML = det.historico.slice().reverse().map(function (h) {
+    var mudanca = h.status_novo ? (h.status_anterior ? esc(h.status_anterior) + ' → ' : '') + esc(h.status_novo) : '';
+    return '<li><div class="quando">' + dataBR(h.data_hora) + ' · ' + esc(h.usuario) + '</div>' +
+      '<div class="acao">' + esc(h.acao) + (mudanca ? ': ' + mudanca : '') + '</div>' +
+      (h.descricao ? '<div class="desc">' + esc(h.descricao) + '</div>' : '') + '</li>';
+  }).join('');
+}
+
+function salvarStatus() {
+  var r = App.racAtual.rac;
+  var novo = $('d-novo-status').value;
+  if (!novo) return;
+  if (!confirm('Alterar o status de ' + r.rac_numero + ' para "' + novo + '"?')) return;
+  var btn = $('d-salvar-status');
+  btn.disabled = true;
+  chamar('api_alterarStatus', r.rac_id, novo, $('d-comentario').value)
+    .then(function (det) { renderDetalhe(det); alerta('d-alerta', 'ok', 'Status atualizado.'); })
+    .catch(function (e) { alerta('d-alerta', 'erro', esc(e.mensagem)); })
+    .finally(function () { btn.disabled = false; });
+}
+
+async function anexarNoDetalhe(files) {
+  var r = App.racAtual.rac;
+  var lista = Array.prototype.slice.call(files);
+  for (var i = 0; i < lista.length; i++) {
+    var f = lista[i];
+    var erro = validarArquivoCliente(f);
+    if (erro) { alerta('d-alerta', 'erro', esc(erro)); continue; }
+    $('d-anexar-status').textContent = 'Enviando ' + (i + 1) + ' de ' + lista.length + '…';
+    try {
+      var b64 = await lerBase64(f);
+      await chamar('api_enviarAnexo', r.rac_id, { nome: f.name, legenda: 'Evidência', base64: b64 });
+    } catch (e) {
+      alerta('d-alerta', 'erro', esc(e.mensagem));
+    }
+  }
+  chamar('api_obterRac', r.rac_id).then(renderDetalhe);
+}
+
+function continuarPreenchimento() {
+  var det = App.racAtual, r = det.rac;
+  limparFormulario();
+  $('f-produto').value = r.produto;
+  $('f-sku').value = r.sku;
+  $('f-lote').value = r.lote;
+  $('f-nf').value = r.nota_fiscal;
+  if (r.chamado_estoca === App.ctx.chamadoNaoAberto) {
+    $('f-chamado-nao').checked = true;
+    $('f-chamado').disabled = true;
+  } else {
+    $('f-chamado').value = r.chamado_estoca;
+  }
+  $('f-categoria').value = r.categoria;
+  atualizarSubcategorias();
+  $('f-subcategoria').value = r.subcategoria;
+  $('f-condicao').value = r.condicao_caixa;
+  $('f-descricao').value = r.descricao;
+  $('f-observacao').value = r.observacao;
+  App.racPendente = { rac_id: r.rac_id, rac_numero: r.rac_numero, anexosExistentes: det.anexos.length };
+  avisoContinuacao();
+  mostrar('nova');
+}
+
+/* =====================================================================
+ * Dashboard
+ * ===================================================================== */
+
+function barras(destino, lista) {
+  var max = lista.reduce(function (m, x) { return Math.max(m, x.total); }, 0);
+  $(destino).innerHTML = lista.length ? lista.map(function (x) {
+    var pct = max ? (x.total / max) * 100 : 0;
+    return '<div class="barra-linha" title="' + esc(x.chave) + ': ' + x.total + '">' +
+      '<span class="rot">' + esc(x.chave) + '</span>' +
+      '<span class="trilho"><span class="barra" style="display:block;width:' + pct.toFixed(1) + '%"></span></span>' +
+      '<span class="num">' + x.total + '</span></div>';
+  }).join('') : '<p class="vazio">Sem dados ainda.</p>';
+}
+
+function colunasMensais(destino, serie) {
+  var max = serie.reduce(function (m, x) { return Math.max(m, x.total); }, 0);
+  $(destino).innerHTML =
+    '<div class="colunas">' + serie.map(function (m) {
+      var h = max ? (m.total / max) * 100 : 0;
+      return '<div class="coluna" title="' + esc(m.rotulo) + ': ' + m.total + ' RAC(s)">' +
+        (m.total ? '<span class="num">' + m.total + '</span>' : '') +
+        '<div class="barra" style="height:' + h.toFixed(1) + '%"></div></div>';
+    }).join('') + '</div>' +
+    '<div class="rotulos-colunas">' + serie.map(function (m) { return '<span>' + esc(m.rotulo) + '</span>'; }).join('') + '</div>';
+}
+
+function kpi(rotulo, valor, nota) {
+  return '<div class="kpi"><div class="rotulo">' + esc(rotulo) + '</div><div class="valor">' + esc(valor) + '</div>' +
+    (nota ? '<div class="nota">' + esc(nota) + '</div>' : '') + '</div>';
+}
+
+function carregarDashboard() {
+  $('dash-sub').textContent = 'Carregando indicadores…';
+  chamar('api_dashboard').then(function (d) {
+    $('dash-sub').textContent = 'Considera RACs registradas (exclui "Em elaboração" e "Cancelada"). Atualizado em ' + dataBR(d.atualizadoEm) + '.';
+    $('dash-kpis').innerHTML = [
+      kpi('Total de RACs', d.total),
+      kpi('Abertas no mês', d.noMes),
+      kpi('Aguardando Qualidade', d.aguardandoQualidade, 'Registradas ou encaminhadas'),
+      kpi('Em análise', d.emAnalise),
+      kpi('Concluídas', d.concluidas, d.total ? Math.round(d.concluidas / d.total * 100) + '% do total' : ''),
+      kpi('Tempo médio de análise', d.tempoMedioDias === null ? '-' : String(d.tempoMedioDias).replace('.', ',') + ' dias', 'Do envio à conclusão')
+    ].join('');
+    colunasMensais('dash-meses', d.porMes);
+    barras('dash-produto', d.porProduto);
+    barras('dash-lote', d.porLote);
+    barras('dash-categoria', d.porCategoria);
+    barras('dash-subcategoria', d.porSubcategoria);
+    barras('dash-condicao', d.porCondicaoCaixa);
+    barras('dash-embalagem', d.porTipoEmbalagem);
+    barras('dash-fornecedor', d.porFornecedor);
+    barras('dash-status', d.porStatus);
+  }).catch(function (e) { $('dash-sub').textContent = e.mensagem; });
+}
+
+/* =====================================================================
+ * Administração (MVP: atalhos para a planilha)
+ * ===================================================================== */
+
+function montarAdmin(a) {
+  var link = function (url, txt) { return '<a class="btn" target="_blank" rel="noopener" href="' + esc(url) + '">' + esc(txt) + '</a>'; };
+  $('admin-conteudo').innerHTML =
+    '<div class="botoes" style="margin-bottom:16px">' +
+      link(a.planilha, 'Abrir planilha-base') + link(a.pastaRaiz, 'Abrir pasta RAC Interna') + link(a.template, 'Editar modelo do documento') +
+    '</div>' +
+    (a.destinatarios ? '' : '<div class="alerta aviso">EMAIL_DESTINATARIOS está vazio na aba Config. Os rascunhos de e-mail não serão criados.</div>') +
+    '<dl class="dados" style="margin-bottom:16px">' +
+      item('Destinatários do e-mail', esc(a.destinatarios)) +
+      item('Domínio permitido', esc(a.dominio || 'Qualquer conta cadastrada')) +
+    '</dl>' +
+    '<h2>Usuários cadastrados</h2><div class="tabela-wrap"><table class="lista"><thead><tr><th>E-mail</th><th>Nome</th><th>Perfil</th><th>Ativo</th></tr></thead><tbody>' +
+    a.usuarios.map(function (u) {
+      return '<tr><td>' + esc(u.email) + '</td><td>' + esc(u.nome) + '</td><td>' + esc(u.perfil) + '</td><td>' + esc(u.ativo) + '</td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<p class="dica">Para incluir usuários, produtos, categorias, subcategorias, condições da caixa e status, edite as abas correspondentes na planilha. ' +
+    'Na aba Subcategorias, use "*" na coluna categoria para valer para todas as categorias.</p>';
+}
+</script>

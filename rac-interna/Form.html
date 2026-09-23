@@ -1,0 +1,115 @@
+<!-- Nova RAC (seções 10 a 15, 44 e 48) -->
+<section class="view" id="view-nova">
+  <h1>Nova RAC Interna</h1>
+  <p class="sub">Registre os fatos observados. A análise técnica é feita pela Qualidade. Não informe dados pessoais do cliente.</p>
+  <div id="aviso-continuacao"></div>
+  <div id="erros-form"></div>
+
+  <form id="form-rac" autocomplete="off" novalidate>
+    <div class="cartao">
+      <h2>1. Produto e referências</h2>
+      <div class="grid">
+        <div class="campo largo" data-campo="produto">
+          <label for="f-produto">Produto <span class="obr">*</span></label>
+          <input type="text" id="f-produto" list="lista-produtos" placeholder="Digite para buscar o produto">
+          <datalist id="lista-produtos"></datalist>
+        </div>
+        <div class="campo" data-campo="sku">
+          <label for="f-sku">SKU</label>
+          <input type="text" id="f-sku" readonly placeholder="Preenchido automaticamente">
+        </div>
+        <div class="campo" data-campo="lote">
+          <label for="f-lote">Lote <span class="obr">*</span></label>
+          <input type="text" id="f-lote" maxlength="40" placeholder="Ex.: 64225">
+        </div>
+        <div class="campo" data-campo="nota_fiscal">
+          <label for="f-nf">Nota Fiscal <span class="obr">*</span></label>
+          <input type="text" id="f-nf" maxlength="30" placeholder="Número da NF">
+        </div>
+        <div class="campo" data-campo="chamado_estoca">
+          <label for="f-chamado">Chamado Estoca <span class="obr">*</span></label>
+          <input type="text" id="f-chamado" maxlength="30" placeholder="Ex.: 1234567">
+          <label class="check"><input type="checkbox" id="f-chamado-nao"> Chamado ainda não aberto</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <h2>2. Classificação</h2>
+      <div class="grid">
+        <div class="campo" data-campo="categoria">
+          <label for="f-categoria">Categoria da ocorrência <span class="obr">*</span></label>
+          <select id="f-categoria"></select>
+        </div>
+        <div class="campo" data-campo="subcategoria">
+          <label for="f-subcategoria">Subcategoria (região)</label>
+          <select id="f-subcategoria"></select>
+        </div>
+        <div class="campo" data-campo="condicao_caixa">
+          <label for="f-condicao">Condição da embalagem externa</label>
+          <select id="f-condicao"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <h2>3. Descrição</h2>
+      <div class="grid">
+        <div class="campo largo" data-campo="descricao">
+          <label for="f-descricao">Descrição da ocorrência <span class="obr">*</span></label>
+          <textarea id="f-descricao" maxlength="3000" placeholder="Ex.: Cliente relatou recebimento do produto com vazamento. Nas imagens é possível observar produto acumulado na região da tampa."></textarea>
+          <span class="dica">Descreva objetivamente o problema observado nas evidências. Evite conclusões técnicas ("defeito de fabricação").</span>
+        </div>
+        <div class="campo largo" data-campo="observacao">
+          <label for="f-observacao">Observações internas (opcional)</label>
+          <textarea id="f-observacao" maxlength="2000" style="min-height:64px" placeholder="Ex.: Terceira ocorrência envolvendo este SKU identificada pelo SAC na semana."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <h2>4. Evidências</h2>
+      <div class="zona" id="zona-upload" data-campo="evidencias" tabindex="0" role="button" aria-label="Adicionar evidências">
+        <strong>Arraste as fotos aqui</strong> ou clique para selecionar<br>
+        <span class="dica" id="dica-tipos"></span>
+      </div>
+      <input type="file" id="f-arquivos" multiple class="oculto">
+      <div class="previas" id="previas"></div>
+    </div>
+
+    <div class="botoes">
+      <button type="submit" class="btn primario grande" id="btn-gerar">GERAR RAC</button>
+      <button type="button" class="btn" id="btn-limpar">Limpar formulário</button>
+    </div>
+  </form>
+</section>
+
+<!-- Confirmação (seção 45) -->
+<section class="view" id="view-confirmacao">
+  <div class="cartao">
+    <div class="alerta ok">RAC registrada com sucesso.</div>
+    <div>Número:</div>
+    <div class="numero-rac" id="conf-numero"></div>
+    <div id="conf-email-status"></div>
+    <div class="botoes" style="margin-bottom:16px">
+      <button class="btn primario" id="conf-ver">Visualizar RAC</button>
+      <a class="btn" id="conf-pdf" target="_blank" rel="noopener">Abrir PDF</a>
+      <a class="btn" id="conf-pasta" target="_blank" rel="noopener">Abrir pasta de evidências</a>
+      <a class="btn" id="conf-rascunho" target="_blank" rel="noopener">Abrir rascunho no Gmail</a>
+      <button class="btn" id="conf-criar-email">Criar e-mail</button>
+      <button class="btn" id="conf-nova">Registrar nova RAC</button>
+    </div>
+    <div class="cartao" style="background:#fbfcfa">
+      <h2>Depois de enviar o e-mail</h2>
+      <p class="sub" style="margin-bottom:10px">Revise o rascunho no Gmail, envie e confirme aqui para registrar o encaminhamento à Qualidade.</p>
+      <button class="btn primario" id="conf-encaminhar">Confirmar envio à Qualidade</button>
+    </div>
+    <details>
+      <summary>Ver texto do e-mail (para copiar)</summary>
+      <p><strong>Para:</strong> <span id="conf-para"></span></p>
+      <p><strong>Assunto:</strong> <span id="conf-assunto"></span> <button class="btn" data-copiar="conf-assunto">Copiar</button></p>
+      <pre class="email" id="conf-corpo"></pre>
+      <button class="btn" data-copiar="conf-corpo">Copiar corpo</button>
+    </details>
+  </div>
+</section>

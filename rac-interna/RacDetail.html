@@ -1,0 +1,116 @@
+<!-- Consulta (seção 46) -->
+<section class="view" id="view-consulta">
+  <h1>Consultar RAC</h1>
+  <p class="sub">Pesquise por número, SKU, produto, lote, NF, chamado Estoca, categoria ou status.</p>
+  <div class="cartao">
+    <form id="form-busca" class="grid" autocomplete="off">
+      <div class="campo largo">
+        <label for="b-texto">Pesquisa</label>
+        <input type="search" id="b-texto" placeholder="Ex.: RAC-INT-2026-0047, SKU001949, 64225…">
+      </div>
+      <div class="campo">
+        <label for="b-status">Status</label>
+        <select id="b-status"></select>
+      </div>
+      <div class="campo">
+        <label for="b-categoria">Categoria</label>
+        <select id="b-categoria"></select>
+      </div>
+      <div class="campo">
+        <label for="b-de">Aberta de</label>
+        <input type="date" id="b-de">
+      </div>
+      <div class="campo">
+        <label for="b-ate">até</label>
+        <input type="date" id="b-ate">
+      </div>
+      <div class="campo largo">
+        <div class="botoes">
+          <button class="btn primario" type="submit">Pesquisar</button>
+          <button class="btn" type="button" id="b-limpar">Limpar filtros</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="cartao">
+    <div id="resultado-resumo" class="dica"></div>
+    <div class="tabela-wrap">
+      <table class="lista">
+        <thead>
+          <tr><th>Número</th><th>Abertura</th><th>Produto / SKU</th><th>Lote</th><th>Categoria</th><th>Status</th></tr>
+        </thead>
+        <tbody id="resultado"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Detalhe (seção 47) -->
+<section class="view" id="view-detalhe">
+  <div class="botoes" style="margin-bottom:12px">
+    <button class="btn" id="d-voltar">← Voltar à consulta</button>
+  </div>
+  <div id="d-alerta"></div>
+  <div class="cartao">
+    <div class="botoes" style="justify-content:space-between">
+      <div>
+        <div class="dica">RAC Interna</div>
+        <div class="numero-rac" id="d-numero" style="margin:0"></div>
+      </div>
+      <span class="badge" id="d-status"></span>
+    </div>
+    <div class="botoes" style="margin-top:12px" id="d-botoes"></div>
+  </div>
+
+  <div class="cartao">
+    <h2>Dados</h2>
+    <dl class="dados" id="d-dados"></dl>
+  </div>
+
+  <div class="cartao">
+    <h2>Descrição</h2>
+    <div class="texto-livre" id="d-descricao"></div>
+    <div id="d-obs-bloco">
+      <h2 style="margin-top:16px">Observações internas</h2>
+      <div class="texto-livre" id="d-observacao"></div>
+    </div>
+  </div>
+
+  <div class="cartao">
+    <h2>Evidências</h2>
+    <div class="galeria" id="d-galeria"></div>
+    <div id="d-anexar" class="oculto" style="margin-top:12px">
+      <input type="file" id="d-arquivos" multiple class="oculto">
+      <button class="btn" id="d-btn-anexar">+ Adicionar evidências</button>
+      <span class="dica" id="d-anexar-status"></span>
+    </div>
+  </div>
+
+  <div class="cartao oculto" id="d-status-bloco">
+    <h2>Alterar status</h2>
+    <div class="grid">
+      <div class="campo">
+        <label for="d-novo-status">Novo status</label>
+        <select id="d-novo-status"></select>
+      </div>
+      <div class="campo largo">
+        <label for="d-comentario">Comentário (registrado no histórico)</label>
+        <textarea id="d-comentario" maxlength="2000" style="min-height:64px"></textarea>
+      </div>
+    </div>
+    <div class="botoes" style="margin-top:10px">
+      <button class="btn primario" id="d-salvar-status">Salvar status</button>
+    </div>
+  </div>
+
+  <div class="cartao">
+    <h2>Parecer da Qualidade</h2>
+    <dl class="dados" id="d-parecer"></dl>
+    <p class="dica">O registro completo do parecer técnico (causa provável, fornecedor, ações corretivas e preventivas) entra na Fase 2.</p>
+  </div>
+
+  <div class="cartao">
+    <h2>Histórico</h2>
+    <ol class="timeline" id="d-historico"></ol>
+  </div>
+</section>
