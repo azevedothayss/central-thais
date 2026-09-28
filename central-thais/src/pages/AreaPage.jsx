@@ -7,6 +7,13 @@ import {
 } from 'lucide-react'
 import TaskCard from '../components/TaskCard'
 
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `${r}, ${g}, ${b}`
+}
+
 const tabs = [
   { id: 'tasks', label: 'Tarefas', icon: CheckSquare },
   { id: 'habits', label: 'Habitos', icon: Repeat },
@@ -47,6 +54,8 @@ export default function AreaPage() {
     )
   }
 
+  const rgb = hexToRgb(area.color)
+
   const handleAddTask = async (e) => {
     e.preventDefault()
     if (!newTaskTitle.trim()) return
@@ -85,11 +94,23 @@ export default function AreaPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <header>
+      {/* Header with area color gradient */}
+      <header
+        className="rounded-2xl p-5 border -mx-4 -mt-2 md:-mt-4"
+        style={{
+          background: `linear-gradient(135deg, rgba(${rgb}, 0.05), rgba(${rgb}, 0.10))`,
+          borderColor: `rgba(${rgb}, 0.10)`,
+        }}
+      >
         <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: area.color }} />
-          <p className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: area.color, opacity: 0.7 }}>
+          <div
+            className="w-3.5 h-3.5 rounded-full shadow-sm"
+            style={{ backgroundColor: area.color }}
+          />
+          <p
+            className="text-[11px] font-bold tracking-widest uppercase"
+            style={{ color: area.color, opacity: 0.7 }}
+          >
             Pilar
           </p>
         </div>
@@ -99,18 +120,26 @@ export default function AreaPage() {
         </p>
       </header>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-brand-text/[0.03] rounded-xl p-1">
+      {/* Tabs with area color active state */}
+      <div
+        className="flex gap-1 rounded-xl p-1 border"
+        style={{
+          backgroundColor: `rgba(${rgb}, 0.03)`,
+          borderColor: `rgba(${rgb}, 0.06)`,
+        }}
+      >
         {tabs.map(tab => {
           const Icon = tab.icon
+          const isActive = activeTab === tab.id
           return (
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setStatusFilter('') }}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all
-                ${activeTab === tab.id
-                  ? 'bg-white text-brand-primary shadow-sm'
+                ${isActive
+                  ? 'bg-white shadow-sm'
                   : 'text-brand-text/35 hover:text-brand-text/50'}`}
+              style={isActive ? { color: area.color } : {}}
             >
               <Icon size={13} />
               <span className="hidden sm:inline">{tab.label}</span>
@@ -122,7 +151,7 @@ export default function AreaPage() {
       {/* Tasks Tab */}
       {(activeTab === 'tasks' || activeTab === 'habits') && (
         <div className="space-y-3">
-          {/* Filters */}
+          {/* Filters with area color */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
             <Filter size={12} className="text-brand-text/25 flex-shrink-0" />
             {['', 'pending', 'in_progress', 'waiting', 'completed'].map(status => (
@@ -131,8 +160,9 @@ export default function AreaPage() {
                 onClick={() => setStatusFilter(status)}
                 className={`px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all
                   ${statusFilter === status
-                    ? 'bg-brand-primary text-white'
+                    ? 'text-white'
                     : 'bg-brand-text/[0.04] text-brand-text/35 hover:text-brand-text/50'}`}
+                style={statusFilter === status ? { backgroundColor: area.color } : {}}
               >
                 {status === '' ? 'Todas' : status === 'pending' ? 'Pendentes' : status === 'in_progress' ? 'Em andamento' : status === 'waiting' ? 'Aguardando' : 'Concluidas'}
               </button>
@@ -150,11 +180,21 @@ export default function AreaPage() {
                 className="flex-1 input-field"
                 autoFocus
               />
-              <button type="submit" className="btn-primary">Adicionar</button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all active:scale-[0.97]"
+                style={{ backgroundColor: area.color }}
+              >
+                Adicionar
+              </button>
               <button type="button" onClick={() => setShowAddTask(false)} className="btn-ghost p-2"><X size={16} /></button>
             </form>
           ) : (
-            <button onClick={() => setShowAddTask(true)} className="card-interactive flex items-center gap-2 w-full text-brand-text/25 text-sm py-3">
+            <button
+              onClick={() => setShowAddTask(true)}
+              className="card-interactive flex items-center gap-2 w-full text-sm py-3"
+              style={{ color: `rgba(${rgb}, 0.4)` }}
+            >
               <Plus size={16} />
               {activeTab === 'habits' ? 'Novo habito' : 'Nova tarefa'}
             </button>
@@ -198,11 +238,21 @@ export default function AreaPage() {
               />
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setShowAddNote(false)} className="btn-ghost">Cancelar</button>
-                <button type="submit" className="btn-primary">Salvar</button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all active:scale-[0.97]"
+                  style={{ backgroundColor: area.color }}
+                >
+                  Salvar
+                </button>
               </div>
             </form>
           ) : (
-            <button onClick={() => setShowAddNote(true)} className="card-interactive flex items-center gap-2 w-full text-brand-text/25 text-sm py-3">
+            <button
+              onClick={() => setShowAddNote(true)}
+              className="card-interactive flex items-center gap-2 w-full text-sm py-3"
+              style={{ color: `rgba(${rgb}, 0.4)` }}
+            >
               <Plus size={16} /> Nova anotacao
             </button>
           )}
@@ -214,7 +264,11 @@ export default function AreaPage() {
           ) : (
             <div className="space-y-2">
               {notes.map(note => (
-                <div key={note.id} className="card group">
+                <div
+                  key={note.id}
+                  className="card group border-l-[3px]"
+                  style={{ borderLeftColor: area.color }}
+                >
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{note.content}</p>
                   <div className="flex items-center justify-between mt-3 pt-2 border-t border-brand-text/[0.04]">
                     <span className="text-[10px] text-brand-text/20">
@@ -266,11 +320,21 @@ export default function AreaPage() {
               </div>
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setShowAddEvent(false)} className="btn-ghost">Cancelar</button>
-                <button type="submit" className="btn-primary">Salvar</button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all active:scale-[0.97]"
+                  style={{ backgroundColor: area.color }}
+                >
+                  Salvar
+                </button>
               </div>
             </form>
           ) : (
-            <button onClick={() => setShowAddEvent(true)} className="card-interactive flex items-center gap-2 w-full text-brand-text/25 text-sm py-3">
+            <button
+              onClick={() => setShowAddEvent(true)}
+              className="card-interactive flex items-center gap-2 w-full text-sm py-3"
+              style={{ color: `rgba(${rgb}, 0.4)` }}
+            >
               <Plus size={16} /> Novo compromisso
             </button>
           )}
@@ -282,8 +346,18 @@ export default function AreaPage() {
           ) : (
             <div className="space-y-2">
               {events.map(event => (
-                <div key={event.id} className="card flex items-center gap-3 py-3 group">
-                  <div className="w-1 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: area.color }} />
+                <div
+                  key={event.id}
+                  className="rounded-2xl border flex items-center gap-3 py-3 px-4 group"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(${rgb}, 0.03), rgba(${rgb}, 0.06))`,
+                    borderColor: `rgba(${rgb}, 0.08)`,
+                  }}
+                >
+                  <div
+                    className="w-1 h-10 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: area.color }}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{event.title}</p>
                     <p className="text-[11px] text-brand-text/35 flex items-center gap-1">

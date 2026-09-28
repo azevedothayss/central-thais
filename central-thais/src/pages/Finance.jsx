@@ -19,12 +19,12 @@ function MonthNav({ month, onChange }) {
 
   return (
     <div className="flex items-center justify-center gap-4">
-      <button onClick={prev} className="p-1.5 rounded-lg hover:bg-brand-text/[0.04] transition-colors">
-        <ChevronLeft size={18} className="text-brand-text/40" />
+      <button onClick={prev} className="p-1.5 rounded-lg hover:bg-emerald-50 transition-colors">
+        <ChevronLeft size={18} className="text-emerald-600/40" />
       </button>
       <span className="font-semibold capitalize text-sm min-w-[140px] text-center">{label}</span>
-      <button onClick={next} className="p-1.5 rounded-lg hover:bg-brand-text/[0.04] transition-colors">
-        <ChevronRight size={18} className="text-brand-text/40" />
+      <button onClick={next} className="p-1.5 rounded-lg hover:bg-emerald-50 transition-colors">
+        <ChevronRight size={18} className="text-emerald-600/40" />
       </button>
     </div>
   )
@@ -120,47 +120,82 @@ export default function Finance() {
   const formatCurrency = (val) =>
     Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-  const barColors = ['#552A7B', '#A56CFF', '#FF675C', '#059669', '#3B82F6', '#F59E0B']
+  const barColors = ['#059669', '#10B981', '#34D399', '#552A7B', '#3B82F6', '#F59E0B']
 
   return (
     <div className="space-y-5">
-      <header>
-        <p className="text-[11px] font-semibold tracking-widest uppercase text-emerald-600/60 mb-1">
-          Pilar &middot; Financas
-        </p>
+      {/* Header with green gradient */}
+      <header
+        className="rounded-2xl p-5 border -mx-4 -mt-2 md:-mt-4"
+        style={{
+          background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.05), rgba(16, 185, 129, 0.10))',
+          borderColor: 'rgba(5, 150, 105, 0.10)',
+        }}
+      >
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="w-3.5 h-3.5 rounded-full shadow-sm bg-emerald-500" />
+          <p className="text-[11px] font-bold tracking-widest uppercase text-emerald-600/60">
+            Pilar &middot; Financas
+          </p>
+        </div>
         <h1 className="font-display text-xl font-bold text-brand-text">Financeiro</h1>
       </header>
 
       <MonthNav month={month} onChange={setMonth} />
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Green themed */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="card">
+        <div
+          className="rounded-2xl p-4 border"
+          style={{
+            background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.04), rgba(16, 185, 129, 0.07))',
+            borderColor: 'rgba(5, 150, 105, 0.08)',
+          }}
+        >
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={14} className="text-emerald-500" />
-            <p className="text-[11px] text-brand-text/40">Receita</p>
+            <p className="text-[11px] text-emerald-600/50">Receita</p>
           </div>
           <p className="text-lg font-bold text-emerald-600">{formatCurrency(summary.totalIncome)}</p>
         </div>
-        <div className="card">
+        <div
+          className="rounded-2xl p-4 border"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 103, 92, 0.04), rgba(255, 103, 92, 0.07))',
+            borderColor: 'rgba(255, 103, 92, 0.08)',
+          }}
+        >
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown size={14} className="text-brand-action" />
-            <p className="text-[11px] text-brand-text/40">Despesas</p>
+            <p className="text-[11px] text-brand-action/50">Despesas</p>
           </div>
           <p className="text-lg font-bold text-brand-action">{formatCurrency(summary.totalExpense)}</p>
         </div>
       </div>
 
-      {/* Balance Bar */}
-      <div className="card">
+      {/* Balance Bar - Tinted */}
+      <div
+        className="rounded-2xl p-4 border"
+        style={{
+          background: summary.balance >= 0
+            ? 'linear-gradient(135deg, rgba(5, 150, 105, 0.03), rgba(16, 185, 129, 0.05))'
+            : 'linear-gradient(135deg, rgba(255, 103, 92, 0.03), rgba(255, 103, 92, 0.05))',
+          borderColor: summary.balance >= 0
+            ? 'rgba(5, 150, 105, 0.08)'
+            : 'rgba(255, 103, 92, 0.08)',
+        }}
+      >
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs text-brand-text/40">Saldo do mes</p>
-          <p className={`text-sm font-bold ${summary.balance >= 0 ? 'text-emerald-600' : 'text-brand-action'}`}>
+          <div className="flex items-center gap-2">
+            <Wallet size={14} className={summary.balance >= 0 ? 'text-emerald-500' : 'text-brand-action'} />
+            <p className="text-xs text-brand-text/40">Saldo do mes</p>
+          </div>
+          <p className={`text-lg font-bold ${summary.balance >= 0 ? 'text-emerald-600' : 'text-brand-action'}`}>
             {formatCurrency(summary.balance)}
           </p>
         </div>
         {summary.totalIncome > 0 && (
-          <div className="h-2 bg-brand-text/[0.04] rounded-full overflow-hidden">
+          <div className="h-2.5 bg-brand-text/[0.04] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -172,9 +207,15 @@ export default function Finance() {
         )}
       </div>
 
-      {/* Overdue Bills */}
+      {/* Overdue Bills - Red tinted */}
       {overdueBills.length > 0 && (
-        <div className="bg-brand-action/5 border border-brand-action/15 rounded-2xl p-4">
+        <div
+          className="rounded-2xl p-4 border"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 103, 92, 0.04), rgba(255, 103, 92, 0.08))',
+            borderColor: 'rgba(255, 103, 92, 0.12)',
+          }}
+        >
           <h3 className="text-xs font-semibold text-brand-action flex items-center gap-2 mb-3">
             <AlertCircle size={14} />
             {overdueBills.length} conta{overdueBills.length > 1 ? 's' : ''} vencida{overdueBills.length > 1 ? 's' : ''}
@@ -198,18 +239,24 @@ export default function Finance() {
         </div>
       )}
 
-      {/* Expenses by Category */}
+      {/* Expenses by Category - Purple tinted */}
       {expensesByTitle.length > 0 && (
         <section>
           <h2 className="section-label">Gastos por categoria</h2>
-          <div className="card space-y-3">
+          <div
+            className="rounded-2xl p-4 border space-y-3"
+            style={{
+              background: 'linear-gradient(135deg, rgba(85, 42, 123, 0.03), rgba(165, 108, 255, 0.05))',
+              borderColor: 'rgba(85, 42, 123, 0.06)',
+            }}
+          >
             {expensesByTitle.map(([title, amount], i) => (
               <div key={title}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm text-brand-text/60">{title}</span>
                   <span className="text-sm font-medium">{formatCurrency(amount)}</span>
                 </div>
-                <div className="h-2 bg-brand-text/[0.04] rounded-full overflow-hidden">
+                <div className="h-2 bg-white/60 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
@@ -224,13 +271,20 @@ export default function Finance() {
         </section>
       )}
 
-      {/* Upcoming Bills */}
+      {/* Upcoming Bills - Amber/warm tinted */}
       {upcomingBills.length > 0 && (
         <section>
           <h2 className="section-label">Proximos vencimentos</h2>
           <div className="space-y-2">
             {upcomingBills.map(bill => (
-              <div key={bill.id} className="card flex items-center justify-between py-3">
+              <div
+                key={bill.id}
+                className="rounded-2xl border flex items-center justify-between py-3 px-4"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.03), rgba(245, 158, 11, 0.06))',
+                  borderColor: 'rgba(245, 158, 11, 0.08)',
+                }}
+              >
                 <div className="min-w-0 flex-1 mr-2">
                   <p className="text-sm truncate">{bill.title}</p>
                   <p className="text-[11px] text-brand-text/30">
@@ -332,7 +386,7 @@ export default function Finance() {
       ) : (
         <button
           onClick={() => setShowAdd(true)}
-          className="card-interactive flex items-center gap-2 w-full text-brand-text/25 text-sm py-3"
+          className="card-interactive flex items-center gap-2 w-full text-emerald-600/35 text-sm py-3"
         >
           <Plus size={16} /> Novo lancamento
         </button>
@@ -343,7 +397,7 @@ export default function Finance() {
         <h2 className="section-label">Todos os lancamentos</h2>
         {entries.length === 0 ? (
           <div className="text-center py-12">
-            <Wallet size={24} className="mx-auto text-brand-text/10 mb-2" />
+            <Wallet size={24} className="mx-auto text-emerald-600/15 mb-2" />
             <p className="text-sm text-brand-text/20">Nenhum lancamento neste mes</p>
           </div>
         ) : (
