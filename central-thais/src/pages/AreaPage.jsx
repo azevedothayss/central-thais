@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAreas, useTasks, useEvents, useNotes } from '../lib/useStore'
-import { useAuth } from '../contexts/AuthContext'
 import {
   Plus, Filter, CheckSquare, Repeat, StickyNote, CalendarDays,
   Clock, X, Trash2
@@ -17,7 +16,6 @@ const tabs = [
 
 export default function AreaPage() {
   const { slug } = useParams()
-  const { user } = useAuth()
   const { areas } = useAreas()
   const area = areas.find(a => a.slug === slug)
 
@@ -44,7 +42,7 @@ export default function AreaPage() {
   if (!area) {
     return (
       <div className="text-center py-20">
-        <p className="text-brand-text/30">Area nao encontrada</p>
+        <p className="text-sm text-brand-text/25">Area nao encontrada</p>
       </div>
     )
   }
@@ -83,20 +81,26 @@ export default function AreaPage() {
     setShowAddEvent(false)
   }
 
+  const activeCount = tasks.filter(t => t.status !== 'completed').length
+
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: area.color }}>{area.name}</h1>
-          <p className="text-xs text-brand-text/30 mt-0.5">
-            {tasks.filter(t => t.status !== 'completed').length} tarefa{tasks.filter(t => t.status !== 'completed').length !== 1 ? 's' : ''} ativa{tasks.filter(t => t.status !== 'completed').length !== 1 ? 's' : ''}
+      <header>
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: area.color }} />
+          <p className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: area.color, opacity: 0.7 }}>
+            Pilar
           </p>
         </div>
-      </div>
+        <h1 className="font-display text-xl font-bold text-brand-text">{area.name}</h1>
+        <p className="text-xs text-brand-text/30 mt-0.5">
+          {activeCount} tarefa{activeCount !== 1 ? 's' : ''} ativa{activeCount !== 1 ? 's' : ''}
+        </p>
+      </header>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-brand-text/5 rounded-xl p-1">
+      <div className="flex gap-1 bg-brand-text/[0.03] rounded-xl p-1">
         {tabs.map(tab => {
           const Icon = tab.icon
           return (
@@ -106,9 +110,9 @@ export default function AreaPage() {
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all
                 ${activeTab === tab.id
                   ? 'bg-white text-brand-primary shadow-sm'
-                  : 'text-brand-text/40 hover:text-brand-text/60'}`}
+                  : 'text-brand-text/35 hover:text-brand-text/50'}`}
             >
-              <Icon size={14} />
+              <Icon size={13} />
               <span className="hidden sm:inline">{tab.label}</span>
             </button>
           )
@@ -119,16 +123,16 @@ export default function AreaPage() {
       {(activeTab === 'tasks' || activeTab === 'habits') && (
         <div className="space-y-3">
           {/* Filters */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <Filter size={14} className="text-brand-text/30 flex-shrink-0" />
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+            <Filter size={12} className="text-brand-text/25 flex-shrink-0" />
             {['', 'pending', 'in_progress', 'waiting', 'completed'].map(status => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all
+                className={`px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all
                   ${statusFilter === status
                     ? 'bg-brand-primary text-white'
-                    : 'bg-brand-text/5 text-brand-text/40 hover:text-brand-text/60'}`}
+                    : 'bg-brand-text/[0.04] text-brand-text/35 hover:text-brand-text/50'}`}
               >
                 {status === '' ? 'Todas' : status === 'pending' ? 'Pendentes' : status === 'in_progress' ? 'Em andamento' : status === 'waiting' ? 'Aguardando' : 'Concluidas'}
               </button>
@@ -147,10 +151,10 @@ export default function AreaPage() {
                 autoFocus
               />
               <button type="submit" className="btn-primary">Adicionar</button>
-              <button type="button" onClick={() => setShowAddTask(false)} className="btn-ghost"><X size={16} /></button>
+              <button type="button" onClick={() => setShowAddTask(false)} className="btn-ghost p-2"><X size={16} /></button>
             </form>
           ) : (
-            <button onClick={() => setShowAddTask(true)} className="card-interactive flex items-center gap-2 w-full text-brand-text/30 text-sm py-3">
+            <button onClick={() => setShowAddTask(true)} className="card-interactive flex items-center gap-2 w-full text-brand-text/25 text-sm py-3">
               <Plus size={16} />
               {activeTab === 'habits' ? 'Novo habito' : 'Nova tarefa'}
             </button>
@@ -158,7 +162,7 @@ export default function AreaPage() {
 
           {/* Task List */}
           {filteredTasks.length === 0 ? (
-            <div className="text-center py-10">
+            <div className="text-center py-12">
               <p className="text-sm text-brand-text/20">
                 {statusFilter ? 'Nenhuma tarefa com esse filtro' : activeTab === 'habits' ? 'Nenhum habito cadastrado' : 'Nenhuma tarefa ainda'}
               </p>
@@ -198,27 +202,27 @@ export default function AreaPage() {
               </div>
             </form>
           ) : (
-            <button onClick={() => setShowAddNote(true)} className="card-interactive flex items-center gap-2 w-full text-brand-text/30 text-sm py-3">
+            <button onClick={() => setShowAddNote(true)} className="card-interactive flex items-center gap-2 w-full text-brand-text/25 text-sm py-3">
               <Plus size={16} /> Nova anotacao
             </button>
           )}
 
           {notes.length === 0 ? (
-            <div className="text-center py-10">
+            <div className="text-center py-12">
               <p className="text-sm text-brand-text/20">Nenhuma anotacao</p>
             </div>
           ) : (
             <div className="space-y-2">
               {notes.map(note => (
                 <div key={note.id} className="card group">
-                  <p className="text-sm whitespace-pre-wrap">{note.content}</p>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-brand-text/5">
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-brand-text/[0.04]">
                     <span className="text-[10px] text-brand-text/20">
                       {new Date(note.updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <button
                       onClick={() => deleteNote(note.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-brand-text/20 hover:text-brand-action transition-all"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-brand-text/15 hover:text-brand-action transition-all"
                     >
                       <Trash2 size={12} />
                     </button>
@@ -250,7 +254,7 @@ export default function AreaPage() {
                   onChange={e => setNewEvent({ ...newEvent, start_at: e.target.value })}
                   className="input-field flex-1"
                 />
-                <label className="flex items-center gap-2 text-sm text-brand-text/50 whitespace-nowrap">
+                <label className="flex items-center gap-2 text-sm text-brand-text/40 whitespace-nowrap">
                   <input
                     type="checkbox"
                     checked={newEvent.all_day}
@@ -266,13 +270,13 @@ export default function AreaPage() {
               </div>
             </form>
           ) : (
-            <button onClick={() => setShowAddEvent(true)} className="card-interactive flex items-center gap-2 w-full text-brand-text/30 text-sm py-3">
+            <button onClick={() => setShowAddEvent(true)} className="card-interactive flex items-center gap-2 w-full text-brand-text/25 text-sm py-3">
               <Plus size={16} /> Novo compromisso
             </button>
           )}
 
           {events.length === 0 ? (
-            <div className="text-center py-10">
+            <div className="text-center py-12">
               <p className="text-sm text-brand-text/20">Nenhum compromisso</p>
             </div>
           ) : (
@@ -282,7 +286,7 @@ export default function AreaPage() {
                   <div className="w-1 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: area.color }} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{event.title}</p>
-                    <p className="text-xs text-brand-text/40 flex items-center gap-1">
+                    <p className="text-[11px] text-brand-text/35 flex items-center gap-1">
                       <Clock size={10} />
                       {event.all_day
                         ? new Date(event.start_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
@@ -292,7 +296,7 @@ export default function AreaPage() {
                   </div>
                   <button
                     onClick={() => deleteEvent(event.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-brand-text/20 hover:text-brand-action transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-brand-text/15 hover:text-brand-action transition-all"
                   >
                     <Trash2 size={14} />
                   </button>

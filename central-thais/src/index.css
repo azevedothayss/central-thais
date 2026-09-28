@@ -5,10 +5,12 @@
 @layer base {
   body {
     @apply bg-brand-bg text-brand-text font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   * {
-    @apply border-brand-text/10;
+    @apply border-brand-text/[0.06];
   }
 }
 
@@ -20,7 +22,7 @@
 
   .btn-secondary {
     @apply bg-brand-primary/10 text-brand-primary px-4 py-2.5 rounded-xl font-semibold text-sm
-           hover:bg-brand-primary/20 active:scale-[0.98] transition-all duration-150;
+           hover:bg-brand-primary/15 active:scale-[0.98] transition-all duration-150;
   }
 
   .btn-action {
@@ -29,49 +31,58 @@
   }
 
   .btn-ghost {
-    @apply text-brand-text/60 px-3 py-2 rounded-lg text-sm
-           hover:bg-brand-text/5 active:scale-[0.98] transition-all duration-150;
+    @apply text-brand-text/50 px-3 py-2 rounded-lg text-sm
+           hover:bg-brand-text/[0.04] active:scale-[0.98] transition-all duration-150;
   }
 
   .card {
-    @apply bg-white rounded-2xl border border-brand-text/5 shadow-sm p-4;
+    @apply bg-white rounded-2xl border border-brand-text/[0.04] p-4 relative;
+    box-shadow: 0 1px 3px rgba(36, 24, 40, 0.04), 0 1px 2px rgba(36, 24, 40, 0.02);
   }
 
   .card-interactive {
-    @apply card hover:shadow-md hover:border-brand-accent/30 transition-all duration-200 cursor-pointer;
+    @apply card cursor-pointer;
+    @apply hover:border-brand-accent/20 transition-all duration-200;
+  }
+  .card-interactive:hover {
+    box-shadow: 0 4px 12px rgba(36, 24, 40, 0.06), 0 1px 3px rgba(36, 24, 40, 0.04);
   }
 
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl border border-brand-text/10 bg-white
-           text-brand-text placeholder:text-brand-text/30
-           focus:outline-none focus:ring-2 focus:ring-brand-accent/40 focus:border-brand-accent/40
+    @apply w-full px-4 py-2.5 rounded-xl border border-brand-text/[0.08] bg-white
+           text-sm text-brand-text placeholder:text-brand-text/25
+           focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent/30
            transition-all duration-150;
   }
 
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium;
   }
 
   .badge-pending {
-    @apply badge bg-amber-100 text-amber-700;
+    @apply badge bg-amber-50 text-amber-600;
   }
 
   .badge-progress {
-    @apply badge bg-brand-accent-light text-brand-accent;
+    @apply badge bg-brand-accent/10 text-brand-accent;
   }
 
   .badge-waiting {
-    @apply badge bg-orange-100 text-orange-600;
+    @apply badge bg-orange-50 text-orange-500;
   }
 
   .badge-done {
-    @apply badge bg-emerald-100 text-emerald-700;
+    @apply badge bg-emerald-50 text-emerald-600;
+  }
+
+  .section-label {
+    @apply text-[11px] font-semibold tracking-widest uppercase text-brand-text/30 mb-3;
   }
 }
 
 @layer utilities {
   .safe-bottom {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
 
   .scrollbar-hide {
