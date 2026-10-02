@@ -11,9 +11,29 @@ export default function QuickAdd({ areas, onClose, onAdded }) {
   const [batchPreview, setBatchPreview] = useState([])
   const [saving, setSaving] = useState(false)
   const inputRef = useRef(null)
+  const dialogRef = useRef(null)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
 
   useEffect(() => {
+    const previousFocus = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     inputRef.current?.focus()
+    const keydown = event => {
+      if (event.key === 'Escape') { event.preventDefault(); closeRef.current() }
+      if (event.key !== 'Tab') return
+      const controls = [...dialogRef.current.querySelectorAll('button:not(:disabled), input, select, textarea')]
+      const first = controls[0], last = controls.at(-1)
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    }
+    document.addEventListener('keydown', keydown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', keydown)
+      previousFocus?.focus()
+    }
   }, [])
 
   const handleTextChange = (val) => {
@@ -55,20 +75,20 @@ export default function QuickAdd({ areas, onClose, onAdded }) {
       e.preventDefault()
       handleSave()
     }
-    if (e.key === 'Escape') onClose()
   }
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
+        ref={dialogRef}
+        role="dialog" aria-modal="true" aria-labelledby="quick-add-title" className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-brand-text/5">
-          <h2 className="font-semibold text-brand-text">
+          <h2 id="quick-add-title" className="font-semibold text-brand-text">
             {isBatch ? 'Adicionar lista de tarefas' : 'Nova tarefa'}
           </h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-brand-text/5 text-brand-text/40">
+          <button aria-label="Fechar nova tarefa" onClick={onClose} className="p-1.5 rounded-lg hover:bg-brand-text/5 text-brand-text/40">
             <X size={18} />
           </button>
         </div>
@@ -77,6 +97,7 @@ export default function QuickAdd({ areas, onClose, onAdded }) {
           {isBatch ? (
             <textarea
               ref={inputRef}
+              aria-label="Título ou lista de tarefas"
               value={text}
               onChange={e => handleTextChange(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -87,6 +108,7 @@ export default function QuickAdd({ areas, onClose, onAdded }) {
           ) : (
             <input
               ref={inputRef}
+              aria-label="Título ou lista de tarefas"
               type="text"
               value={text}
               onChange={e => handleTextChange(e.target.value)}
@@ -97,6 +119,7 @@ export default function QuickAdd({ areas, onClose, onAdded }) {
           )}
 
           <select
+            aria-label="Área da vida"
             value={areaId}
             onChange={e => setAreaId(e.target.value)}
             className="input-field text-sm"

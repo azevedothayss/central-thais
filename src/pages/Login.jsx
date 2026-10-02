@@ -12,7 +12,7 @@ export default function Login() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="min-h-screen bg-brand-bg flex items-center justify-center px-4">
+      <div className="central-login min-h-screen bg-brand-bg flex items-center justify-center px-4">
         <div className="card max-w-sm w-full text-center">
           <h1 className="font-display text-2xl font-bold text-brand-primary mb-2">Central Thais</h1>
           <p className="text-sm text-brand-text/40 mb-6">Configure o Supabase para comecar</p>
@@ -57,11 +57,11 @@ VITE_SUPABASE_ANON_KEY=sua-chave`}
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg flex items-center justify-center px-4">
+    <div className="central-login min-h-screen bg-brand-bg flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="font-display text-3xl font-bold text-brand-primary">Central Thais</h1>
-          <p className="text-sm text-brand-text/35 mt-1.5">Seu painel de organizacao pessoal</p>
+          <p className="text-sm text-brand-text/35 mt-1.5">Seu espaço de organização pessoal</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-4">
@@ -72,9 +72,9 @@ VITE_SUPABASE_ANON_KEY=sua-chave`}
           )}
 
           <div>
-            <label className="block text-xs font-medium text-brand-text/50 mb-1.5">Email</label>
+            <label htmlFor="login-email" className="block text-xs font-medium text-brand-text/50 mb-1.5">E-mail</label>
             <input
-              type="email"
+              id="login-email" type="email" autoComplete="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="seu@email.com"
@@ -85,9 +85,9 @@ VITE_SUPABASE_ANON_KEY=sua-chave`}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-brand-text/50 mb-1.5">Senha</label>
+            <label htmlFor="login-password" className="block text-xs font-medium text-brand-text/50 mb-1.5">Senha</label>
             <input
-              type="password"
+              id="login-password" type="password" autoComplete={isSignUp ? 'new-password' : 'current-password'}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="Minimo 6 caracteres"
@@ -120,3 +120,4 @@ VITE_SUPABASE_ANON_KEY=sua-chave`}
     </div>
   )
 }
+

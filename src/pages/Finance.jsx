@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFinances } from '../lib/useStore'
+import { areaStyle, todayInBrazil } from '../lib/presentation'
 import {
   Plus, TrendingUp, TrendingDown, Wallet, Check,
   ChevronLeft, ChevronRight, X, Trash2, AlertCircle
@@ -19,11 +20,11 @@ function MonthNav({ month, onChange }) {
 
   return (
     <div className="flex items-center justify-center gap-4">
-      <button onClick={prev} className="p-1.5 rounded-lg hover:bg-emerald-50 transition-colors">
+      <button aria-label="Mês anterior" onClick={prev} className="p-1.5 rounded-lg hover:bg-emerald-50 transition-colors">
         <ChevronLeft size={18} className="text-emerald-600/40" />
       </button>
       <span className="font-semibold capitalize text-sm min-w-[140px] text-center">{label}</span>
-      <button onClick={next} className="p-1.5 rounded-lg hover:bg-emerald-50 transition-colors">
+      <button aria-label="Próximo mês" onClick={next} className="p-1.5 rounded-lg hover:bg-emerald-50 transition-colors">
         <ChevronRight size={18} className="text-emerald-600/40" />
       </button>
     </div>
@@ -31,7 +32,7 @@ function MonthNav({ month, onChange }) {
 }
 
 export default function Finance() {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayInBrazil()
   const [month, setMonth] = useState(today.slice(0, 7))
   const { entries, summary, addEntry, updateEntry, deleteEntry } = useFinances(month)
   const [showAdd, setShowAdd] = useState(false)
@@ -123,10 +124,10 @@ export default function Finance() {
   const barColors = ['#059669', '#10B981', '#34D399', '#552A7B', '#3B82F6', '#F59E0B']
 
   return (
-    <div className="space-y-5">
+    <div className="ct-finance-page space-y-5" style={areaStyle({slug: 'financeiro'})}>
       {/* Header with green gradient */}
       <header
-        className="rounded-2xl p-5 border -mx-4 -mt-2 md:-mt-4"
+        className="ct-area-header border"
         style={{
           background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.05), rgba(16, 185, 129, 0.10))',
           borderColor: 'rgba(5, 150, 105, 0.10)',
@@ -135,7 +136,7 @@ export default function Finance() {
         <div className="flex items-center gap-2.5 mb-1">
           <div className="w-3.5 h-3.5 rounded-full shadow-sm bg-emerald-500" />
           <p className="text-[11px] font-bold tracking-widest uppercase text-emerald-600/60">
-            Pilar &middot; Financas
+            Pilar &middot; Finanças
           </p>
         </div>
         <h1 className="font-display text-xl font-bold text-brand-text">Financeiro</h1>
@@ -188,7 +189,7 @@ export default function Finance() {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Wallet size={14} className={summary.balance >= 0 ? 'text-emerald-500' : 'text-brand-action'} />
-            <p className="text-xs text-brand-text/40">Saldo do mes</p>
+            <p className="text-xs text-brand-text/40">Saldo previsto do mês</p>
           </div>
           <p className={`text-lg font-bold ${summary.balance >= 0 ? 'text-emerald-600' : 'text-brand-action'}`}>
             {formatCurrency(summary.balance)}
@@ -274,7 +275,7 @@ export default function Finance() {
       {/* Upcoming Bills - Amber/warm tinted */}
       {upcomingBills.length > 0 && (
         <section>
-          <h2 className="section-label">Proximos vencimentos</h2>
+          <h2 className="section-label">Próximos vencimentos</h2>
           <div className="space-y-2">
             {upcomingBills.map(bill => (
               <div

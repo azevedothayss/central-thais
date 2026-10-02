@@ -8,7 +8,7 @@ const statusConfig = {
   pending: { label: 'Pendente', badge: 'badge-pending', icon: Circle },
   in_progress: { label: 'Em andamento', badge: 'badge-progress', icon: Clock },
   waiting: { label: 'Aguardando', badge: 'badge-waiting', icon: Pause },
-  completed: { label: 'Concluida', badge: 'badge-done', icon: Check },
+  completed: { label: 'Concluída', badge: 'badge-done', icon: Check },
 }
 
 export default function TaskCard({ task, onUpdate, onDelete, onAddSubtask, onToggleSubtask }) {
@@ -54,10 +54,11 @@ export default function TaskCard({ task, onUpdate, onDelete, onAddSubtask, onTog
   }
 
   return (
-    <div className={`card transition-all duration-200 ${task.status === 'completed' ? 'opacity-60' : ''}`}>
+    <div className={`card task-card transition-all duration-200 ${task.status === 'completed' ? 'opacity-60' : ''}`}>
       <div className="flex items-start gap-3">
         <button
           onClick={toggleComplete}
+          aria-label={(task.status === 'completed' ? 'Reabrir ' : 'Concluir ') + task.title}
           className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
             ${task.status === 'completed'
               ? 'bg-emerald-500 border-emerald-500 text-white'
@@ -71,13 +72,13 @@ export default function TaskCard({ task, onUpdate, onDelete, onAddSubtask, onTog
             <p className={`font-medium text-sm leading-snug ${task.status === 'completed' ? 'line-through text-brand-text/40' : ''}`}>
               {task.title}
             </p>
-            <button onClick={() => setExpanded(!expanded)} className="flex-shrink-0 p-1 rounded text-brand-text/30 hover:text-brand-text/60">
+            <button onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-label={(expanded ? 'Recolher ' : 'Ver detalhes de ') + task.title} className="flex-shrink-0 p-1 rounded text-brand-text/30 hover:text-brand-text/60">
               {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 mt-1.5">
-            <button onClick={cycleStatus} className={config.badge + ' cursor-pointer hover:opacity-80'}>
+            <button onClick={cycleStatus} aria-label={'Alterar status de ' + task.title + ': ' + config.label} className={config.badge + ' cursor-pointer hover:opacity-80'}>
               <StatusIcon size={10} className="mr-1" />
               {config.label}
             </button>
@@ -127,6 +128,7 @@ export default function TaskCard({ task, onUpdate, onDelete, onAddSubtask, onTog
                     <li key={sub.id} className="flex items-center gap-2.5">
                       <button
                         onClick={() => onToggleSubtask(task.id, sub.id, !sub.completed)}
+                        aria-label={(sub.completed ? 'Reabrir ' : 'Concluir ') + sub.title}
                         className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-all
                           ${sub.completed ? 'bg-brand-accent border-brand-accent text-white' : 'border-brand-text/20'}`}
                       >
@@ -142,13 +144,14 @@ export default function TaskCard({ task, onUpdate, onDelete, onAddSubtask, onTog
             )}
             <form onSubmit={handleAddSubtask} className="flex gap-2 mt-2">
               <input
+                aria-label={'Nova subtarefa de ' + task.title}
                 type="text"
                 value={newSubtask}
                 onChange={e => setNewSubtask(e.target.value)}
                 placeholder="Nova subtarefa..."
                 className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-brand-text/10 focus:outline-none focus:ring-1 focus:ring-brand-accent/40"
               />
-              <button type="submit" className="p-1.5 rounded-lg text-brand-accent hover:bg-brand-accent/10">
+              <button type="submit" aria-label="Adicionar subtarefa" className="p-1.5 rounded-lg text-brand-accent hover:bg-brand-accent/10">
                 <Plus size={16} />
               </button>
             </form>
@@ -163,6 +166,7 @@ export default function TaskCard({ task, onUpdate, onDelete, onAddSubtask, onTog
             {editingResume ? (
               <div className="flex gap-2">
                 <textarea
+                  aria-label={'Ponto de retomada de ' + task.title}
                   value={resumeNote}
                   onChange={e => setResumeNote(e.target.value)}
                   className="flex-1 px-3 py-2 text-sm rounded-lg border border-brand-text/10 resize-none focus:outline-none focus:ring-1 focus:ring-brand-accent/40"
@@ -190,7 +194,7 @@ export default function TaskCard({ task, onUpdate, onDelete, onAddSubtask, onTog
               Aguardando
             </button>
             <button
-              onClick={() => onDelete(task.id)}
+              onClick={() => onDelete(task.id)} aria-label={'Excluir ' + task.title}
               className="btn-ghost text-xs text-brand-action/60 hover:text-brand-action ml-auto"
             >
               <Trash2 size={14} />
