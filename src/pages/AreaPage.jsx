@@ -6,6 +6,7 @@ import {
   Clock, X, Trash2
 } from 'lucide-react'
 import TaskCard from '../components/TaskCard'
+import { areaStyle } from '../lib/presentation'
 
 function hexToRgb(hex) {
   const r = parseInt(hex.slice(1, 3), 16)
@@ -16,7 +17,7 @@ function hexToRgb(hex) {
 
 const tabs = [
   { id: 'tasks', label: 'Tarefas', icon: CheckSquare },
-  { id: 'habits', label: 'Habitos', icon: Repeat },
+  { id: 'habits', label: 'Hábitos', icon: Repeat },
   { id: 'notes', label: 'Notas', icon: StickyNote },
   { id: 'agenda', label: 'Agenda', icon: CalendarDays },
 ]
@@ -93,10 +94,10 @@ export default function AreaPage() {
   const activeCount = tasks.filter(t => t.status !== 'completed').length
 
   return (
-    <div className="space-y-5">
+    <div className="ct-area-page space-y-5" style={areaStyle(area)}>
       {/* Header with area color gradient */}
       <header
-        className="rounded-2xl p-5 border -mx-4 -mt-2 md:-mt-4"
+        className="ct-area-header border"
         style={{
           background: `linear-gradient(135deg, rgba(${rgb}, 0.05), rgba(${rgb}, 0.10))`,
           borderColor: `rgba(${rgb}, 0.10)`,
@@ -122,7 +123,7 @@ export default function AreaPage() {
 
       {/* Tabs with area color active state */}
       <div
-        className="flex gap-1 rounded-xl p-1 border"
+        className="ct-area-tabs flex rounded-xl border"
         style={{
           backgroundColor: `rgba(${rgb}, 0.03)`,
           borderColor: `rgba(${rgb}, 0.06)`,
@@ -142,7 +143,7 @@ export default function AreaPage() {
               style={isActive ? { color: area.color } : {}}
             >
               <Icon size={13} />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span>{tab.label}</span>
             </button>
           )
         })}
@@ -152,7 +153,7 @@ export default function AreaPage() {
       {(activeTab === 'tasks' || activeTab === 'habits') && (
         <div className="space-y-3">
           {/* Filters with area color */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+          <div className="ct-area-filter flex items-center gap-1.5 overflow-x-auto">
             <Filter size={12} className="text-brand-text/25 flex-shrink-0" />
             {['', 'pending', 'in_progress', 'waiting', 'completed'].map(status => (
               <button
@@ -164,7 +165,7 @@ export default function AreaPage() {
                     : 'bg-brand-text/[0.04] text-brand-text/35 hover:text-brand-text/50'}`}
                 style={statusFilter === status ? { backgroundColor: area.color } : {}}
               >
-                {status === '' ? 'Todas' : status === 'pending' ? 'Pendentes' : status === 'in_progress' ? 'Em andamento' : status === 'waiting' ? 'Aguardando' : 'Concluidas'}
+                {status === '' ? 'Todas' : status === 'pending' ? 'Pendentes' : status === 'in_progress' ? 'Em andamento' : status === 'waiting' ? 'Aguardando' : 'Concluídas'}
               </button>
             ))}
           </div>
@@ -383,3 +384,4 @@ export default function AreaPage() {
     </div>
   )
 }
+

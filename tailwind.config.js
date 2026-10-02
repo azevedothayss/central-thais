@@ -9,7 +9,7 @@ export default {
       colors: {
         brand: {
           bg: '#FAF8F5',
-          text: '#241828',
+          text: '#393342',
           primary: '#552A7B',
           accent: '#A56CFF',
           action: '#FF675C',
@@ -19,10 +19,11 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Montserrat', 'system-ui', 'sans-serif'],
-        display: ['Playfair Display', 'serif'],
+        sans: ['DM Sans', 'system-ui', 'sans-serif'],
+        display: ['Lora', 'Georgia', 'serif'],
       },
     },
   },
   plugins: [],
 }
+

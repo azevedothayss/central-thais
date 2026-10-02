@@ -1,231 +1,81 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useAreas } from '../lib/useStore'
-import {
-  Home, Heart, Wallet, Briefcase, Rocket, BookOpen,
-  Plus, LogOut, Menu, X, LayoutDashboard
-} from 'lucide-react'
+import { areaPath, areaStyle } from '../lib/presentation'
+import { LayoutDashboard, Wallet, Plus, LogOut, Menu, X, Leaf } from 'lucide-react'
 import QuickAdd from './QuickAdd'
 
-const iconMap = {
-  heart: Heart,
-  wallet: Wallet,
-  briefcase: Briefcase,
-  rocket: Rocket,
-  'book-open': BookOpen,
+function Brand() {
+  return <div className="ct-brand"><span className="ct-brand-mark" aria-hidden="true">t<span /></span><div>Central <em>Thais</em><small>UM ESPAÇO PARA VOCÊ</small></div></div>
 }
-
-function SidebarLink({ to, label, color, icon: Icon, onClick }) {
-  return (
-    <NavLink
-      to={to}
-      onClick={onClick}
-      className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150
-         ${isActive
-          ? 'font-semibold'
-          : 'text-brand-text/45 hover:text-brand-text/70'}`
-      }
-      style={({ isActive }) => isActive && color ? {
-        backgroundColor: `${color}10`,
-        color: color,
-      } : isActive ? {
-        backgroundColor: 'rgba(85, 42, 123, 0.08)',
-        color: '#552A7B',
-      } : {}}
-    >
-      {color ? (
-        <div className="w-5 flex justify-center">
-          <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: color }} />
-        </div>
-      ) : (
-        <Icon size={18} className="opacity-50" />
-      )}
-      <span className="truncate">{label}</span>
-    </NavLink>
-  )
+function SidebarLink({ to, label, area, icon: Icon, onClick }) {
+  return <NavLink to={to} end={to === '/'} onClick={onClick}
+    className={({ isActive }) => 'ct-nav-link' + (isActive ? ' active' : '') + (area ? ' area-link' : '')}
+    style={area ? areaStyle(area) : undefined}>
+    {area ? <span className="ct-area-dot" /> : <Icon size={20} strokeWidth={1.7} />}
+    <span>{label}</span>
+  </NavLink>
 }
-
 export default function Layout({ children }) {
   const { signOut, user } = useAuth()
   const { areas } = useAreas()
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
-
-  const areaLinks = areas.map(a => ({
-    to: a.slug === 'financeiro' ? '/financeiro' : `/area/${a.slug}`,
-    label: a.name,
-    color: a.color,
-  }))
-
-  const mobileNavItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Painel' },
-    ...areaLinks.slice(0, 3).map(a => ({
-      ...a,
-      icon: iconMap[areas.find(ar => ar.color === a.color)?.icon] || Home,
-    })),
-  ]
-
-  return (
-    <div className="min-h-screen bg-brand-bg">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-56 flex-col border-r border-brand-text/[0.04] z-30"
-        style={{ background: 'linear-gradient(180deg, #ffffff, #faf8f5)' }}
-      >
-        {/* Logo */}
-        <div className="px-5 pt-6 pb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-brand-primary flex items-center justify-center">
-              <span className="text-white font-display font-bold text-sm">CT</span>
-            </div>
-            <div>
-              <h1 className="font-display text-base font-bold text-brand-primary tracking-tight leading-tight">
-                Central Thais
-              </h1>
-              <p className="text-[10px] text-brand-text/25 leading-tight">
-                @{user?.email?.split('@')[0] || 'thais'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex-1 px-3 overflow-y-auto space-y-0.5">
-          <SidebarLink to="/" icon={LayoutDashboard} label="Visao geral" />
-
-          <div className="pt-5 pb-2 px-3">
-            <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-brand-text/20">
-              Pilares
-            </p>
-          </div>
-          {areaLinks.map(item => (
-            <SidebarLink key={item.to} {...item} />
-          ))}
-        </nav>
-
-        <div className="p-3 space-y-1.5 border-t border-brand-text/[0.04]">
-          <button
-            onClick={() => setShowQuickAdd(true)}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold
-                       bg-brand-primary text-white hover:bg-brand-primary/90 transition-all active:scale-[0.98]
-                       shadow-sm shadow-brand-primary/20"
-          >
-            <Plus size={16} />
-            Nova tarefa
-          </button>
-          <button
-            onClick={signOut}
-            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-[11px]
-                       text-brand-text/25 hover:text-brand-action hover:bg-brand-action/5 transition-all"
-          >
-            <LogOut size={13} />
-            Sair
-          </button>
-        </div>
-      </aside>
-
-      {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md border-b border-brand-text/[0.04] z-30 px-4 h-13 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-brand-primary flex items-center justify-center">
-            <span className="text-white font-display font-bold text-xs">CT</span>
-          </div>
-          <h1 className="font-display text-base font-bold text-brand-primary tracking-tight">Central Thais</h1>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setShowQuickAdd(true)}
-            className="p-2 rounded-xl bg-brand-primary text-white active:scale-95 transition-transform shadow-sm shadow-brand-primary/20"
-          >
-            <Plus size={18} />
-          </button>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-xl text-brand-text/35 hover:text-brand-text/50"
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-13 bg-black/15 backdrop-blur-[2px] z-20" onClick={() => setMobileMenuOpen(false)}>
-          <div
-            className="bg-white rounded-b-2xl shadow-xl mx-2 p-3 space-y-0.5"
-            onClick={e => e.stopPropagation()}
-          >
-            <SidebarLink to="/" icon={LayoutDashboard} label="Visao geral" onClick={() => setMobileMenuOpen(false)} />
-            <div className="py-2.5 px-3">
-              <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-brand-text/20">Pilares</p>
-            </div>
-            {areaLinks.map(item => (
-              <SidebarLink key={item.to} {...item} onClick={() => setMobileMenuOpen(false)} />
-            ))}
-            <div className="pt-2 mt-1 border-t border-brand-text/[0.04]">
-              <button
-                onClick={() => { signOut(); setMobileMenuOpen(false) }}
-                className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-[11px] text-brand-text/25 hover:text-brand-action"
-              >
-                <LogOut size={13} />
-                Sair
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <main className="md:ml-56 pt-14 md:pt-0 pb-20 md:pb-6 min-h-screen">
-        <div className="max-w-2xl mx-auto px-4 py-6 md:py-8">
-          {children}
-        </div>
-      </main>
-
-      {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-brand-text/[0.04] z-30 safe-bottom">
-        <div className="flex justify-around py-1">
-          {mobileNavItems.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-medium transition-all
-                 ${isActive ? 'text-brand-primary' : 'text-brand-text/30'}`
-              }
-            >
-              {item.color ? (
-                <div className="w-[22px] h-[22px] flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: item.color }} />
-                </div>
-              ) : (
-                <item.icon size={22} />
-              )}
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-medium text-brand-text/30"
-          >
-            <Menu size={22} />
-            <span>Mais</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* Quick Add Modal */}
-      {showQuickAdd && (
-        <QuickAdd
-          areas={areas}
-          onClose={() => setShowQuickAdd(false)}
-          onAdded={() => {
-            setShowQuickAdd(false)
-            navigate(0)
-          }}
-        />
-      )}
+  const location = useLocation()
+  const drawerRef = useRef(null)
+  const menuRef = useRef(null)
+  const area = areas.find(a => location.pathname === areaPath(a))
+  const title = location.pathname === '/' ? 'Meu dia' : area?.name || 'Financeiro'
+  const closeMenu = () => setMobileMenuOpen(false)
+  useEffect(() => { closeMenu(); window.scrollTo({ top: 0 }); }, [location.pathname])
+  useEffect(() => { document.title = 'Central Thais · ' + title }, [title])
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    drawerRef.current?.querySelector('button')?.focus()
+    const keydown = event => {
+      if (event.key === 'Escape') closeMenu()
+      if (event.key !== 'Tab') return
+      const controls = [...drawerRef.current.querySelectorAll('a, button')]
+      const first = controls[0], last = controls.at(-1)
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    }
+    const resize = () => { if (window.innerWidth > 760) closeMenu() }
+    document.addEventListener('keydown', keydown)
+    window.addEventListener('resize', resize)
+    return () => {
+      document.body.style.overflow = previous
+      document.removeEventListener('keydown', keydown)
+      window.removeEventListener('resize', resize)
+      menuRef.current?.focus()
+    }
+  }, [mobileMenuOpen])
+  const navigation = onClick => <>
+    <p className="ct-nav-heading">SEU COTIDIANO</p>
+    <nav aria-label="Seu cotidiano">
+      <SidebarLink to="/" icon={LayoutDashboard} label="Meu dia" onClick={onClick} />
+      <SidebarLink to="/financeiro" icon={Wallet} label="Finanças" onClick={onClick} />
+    </nav>
+    <div className="ct-nav-divider" />
+    <p className="ct-nav-heading">ÁREAS DA VIDA</p>
+    <nav aria-label="Áreas da vida">{areas.map(a => <SidebarLink key={a.id} to={areaPath(a)} label={a.name} area={a} onClick={onClick} />)}</nav>
+  </>
+  const profile = <div className="ct-profile"><span className="ct-avatar">TA</span><div><strong>Thais Azevedo</strong><small>{user?.email || 'Meu espaço pessoal'}</small></div></div>
+  return <div className="central-app">
+    <a className="ct-skip" href="#main-content">Pular para o conteúdo</a>
+    <aside className="ct-sidebar" aria-label="Navegação principal">
+      <Brand />{navigation()}
+      <div className="ct-sidebar-bottom"><div className="ct-thought"><Leaf size={23} strokeWidth={1.4} /><p>Um passo de cada vez.<br /><em>Você está no seu tempo.</em></p></div>{profile}<button className="ct-signout" onClick={signOut}><LogOut size={17} />Sair</button></div>
+    </aside>
+    <div className="ct-main-shell">
+      <header className="ct-topbar"><div className="ct-breadcrumb"><button ref={menuRef} className="ct-icon-button ct-menu-toggle" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menu" aria-expanded={mobileMenuOpen} aria-controls={mobileMenuOpen ? 'mobile-navigation' : undefined}><Menu size={22} /></button><span className="ct-breadcrumb-base">Meu espaço<span>/</span></span><strong>{title}</strong></div><div className="ct-topbar-actions"><span className="ct-header-date">{new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: 'numeric', month: 'long', year: 'numeric' })}</span><button className="ct-button ct-primary" onClick={() => setShowQuickAdd(true)}><Plus size={18} /><span>Nova tarefa</span></button></div></header>
+      <main id="main-content" className="ct-content" tabIndex={-1}>{children}<footer className="ct-footer"><span>Central Thais</span><span>Seu espaço, no seu ritmo.</span></footer></main>
     </div>
-  )
+    {mobileMenuOpen && <div className="ct-drawer-backdrop" onClick={closeMenu}><aside ref={drawerRef} id="mobile-navigation" className="ct-drawer" role="dialog" aria-modal="true" aria-label="Menu da Central" onClick={event => event.stopPropagation()}><div className="ct-drawer-head"><Brand /><button className="ct-icon-button" onClick={closeMenu} aria-label="Fechar menu"><X size={22} /></button></div>{navigation(closeMenu)}<div className="ct-sidebar-bottom">{profile}<button className="ct-signout" onClick={() => { signOut(); closeMenu() }}><LogOut size={17} />Sair</button></div></aside></div>}
+    {showQuickAdd && <QuickAdd areas={areas} onClose={() => setShowQuickAdd(false)} onAdded={() => { setShowQuickAdd(false); navigate(0) }} />}
+  </div>
 }
